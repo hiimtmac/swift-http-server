@@ -26,6 +26,7 @@ enum NIOHTTPServerConfigurationError: Error, Equatable, CustomStringConvertible 
     case tcpConnectionLimitsRequireHTTP1OrHTTP2
     case tlsHandshakeLimitRequiresTLS
     case invalidConnectionLimit(name: String, requirement: String)
+    case acceptedChannelRequiresHTTP1OrHTTP2
 
     var description: String {
         switch self {
@@ -61,6 +62,9 @@ enum NIOHTTPServerConfigurationError: Error, Equatable, CustomStringConvertible 
 
         case .invalidConnectionLimit(let name, let requirement):
             "Invalid configuration: `\(name)` must be \(requirement)."
+
+        case .acceptedChannelRequiresHTTP1OrHTTP2:
+            "Invalid configuration: an accepted stream channel can only serve HTTP/1.1 or HTTP/2, but only HTTP/3 is supported."
         }
     }
 }

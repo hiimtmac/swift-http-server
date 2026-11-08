@@ -461,7 +461,7 @@ public struct NIOHTTPServer: HTTPServer {
     }
 
     /// Fail the listening address promise if the server is shutting down before it began listening.
-    private func finishListeningAddressPromise() {
+    func finishListeningAddressPromise() {
         switch self.listeningAddressState.withLockedValue({ $0.close() }) {
         case .failPromise(let promise, let error):
             promise.fail(error)

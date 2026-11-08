@@ -73,7 +73,7 @@ extension NIOHTTPServer {
     /// The dispatcher owns the channel's `executeThenClose` so the
     /// `NIOAsyncWriter` is finished cleanly whether or not the connection
     /// handler called ``Connection/handleRequests(handler:)``.
-    private func dispatchPlaintextHTTP1_1Connection<Handler: NIOHTTPServerConnectionHandler>(
+    func dispatchPlaintextHTTP1_1Connection<Handler: NIOHTTPServerConnectionHandler>(
         requestChannel: sending NIOAsyncChannel<HTTPRequestPart, HTTPResponsePart>,
         clientClosed: AsyncStream<Void>,
         connectionHandler: Handler
