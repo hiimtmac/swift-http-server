@@ -356,6 +356,11 @@ public struct NIOHTTPServer: HTTPServer {
         // If the handler didn't properly conclude the response, the HTTP codec is in an inconsistent state.
         if !exchangeState.finishedWriting {
             self.logger.debug("Handler did not conclude the response.")
+            if case .http2 = requestContext.connectionContext.httpVersion {
+                // HTTP/2 request streams don't half-close when the writer finishes, so nothing else would end this
+                // stream. Reset it with CANCEL.
+                Self.abortRequest(requestContext: requestContext, error: UnconcludedResponse())
+            }
             return false
         }
 
@@ -704,4 +709,9 @@ extension NIOHTTPServer {
             serverChannel.channel.close(promise: nil)
         }
     }
+}
+
+/// Resets an HTTP/2 stream whose handler returned without concluding its response.
+private struct UnconcludedResponse: HTTPServerHTTP2StreamResetErrorConvertible {
+    var http2StreamResetCode: UInt32 { 0x08 }
 }
