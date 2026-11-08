@@ -308,7 +308,11 @@ extension NIOHTTPServer {
                                 wrappingChannelSynchronously: http2StreamChannel,
                                 configuration: .init(
                                     backPressureStrategy: .init(self.configuration.backpressureStrategy),
-                                    isOutboundHalfClosureEnabled: true
+                                    // An HTTP/2 stream channel treats any close, including an output
+                                    // half-close, as a reset. A concluded response already ends the stream
+                                    // with END_STREAM, which may still be queued behind flow control when
+                                    // the writer finishes, so the writer must not close the stream.
+                                    isOutboundHalfClosureEnabled: false
                                 )
                             ),
                             clientClosed: clientClosed
