@@ -85,7 +85,7 @@ extension NIOHTTPServer {
         }
     }
 
-    private func dispatchSecureConnection<Handler: NIOHTTPServerConnectionHandler>(
+    func dispatchSecureConnection<Handler: NIOHTTPServerConnectionHandler>(
         upgradeResult: EventLoopFuture<NegotiationResult>,
         connectionHandler: Handler
     ) async {

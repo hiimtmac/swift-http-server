@@ -95,7 +95,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/apple/swift-http-api-proposal.git",
-            .upToNextMinor(from: "0.2.0")
+            .upToNextMinor(from: "0.3.0")
         ),
         .package(url: "https://github.com/apple/swift-distributed-tracing.git", from: "1.4.1"),
         .package(url: "https://github.com/apple/swift-certificates.git", from: "1.19.3"),

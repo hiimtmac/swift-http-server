@@ -23,6 +23,7 @@ enum NIOHTTPServerConfigurationError: Error, Equatable, CustomStringConvertible 
     // swift-nio-quic doesn't currently support mTLS. See https://github.com/apple/swift-nio-quic/issues/5.
     case mTLSNotCurrentlySupportedOverHTTP3
     case datagramSocketGroupCountOutOfRange(requested: Int, available: Int)
+    case acceptedChannelRequiresHTTP1OrHTTP2
 
     var description: String {
         switch self {
@@ -49,6 +50,9 @@ enum NIOHTTPServerConfigurationError: Error, Equatable, CustomStringConvertible 
 
         case .datagramSocketGroupCountOutOfRange(let requested, let available):
             "Invalid configuration: the datagram socket group asked for \(requested) sockets, but \(available) event loops are available."
+
+        case .acceptedChannelRequiresHTTP1OrHTTP2:
+            "Invalid configuration: an accepted stream channel can only serve HTTP/1.1 or HTTP/2, but only HTTP/3 is supported."
         }
     }
 }
