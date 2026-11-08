@@ -149,6 +149,7 @@ extension NIOHTTPServer {
     ) -> EventLoopFuture<HTTPRequestChannelAndCancellationSignal> {
         channel.pipeline.configureHTTPServerPipeline().flatMapThrowing {
 
+            try channel.pipeline.syncOperations.addHandler(HTTP1ConnectionCloseHandler())
             try channel.pipeline.syncOperations.addHandler(HTTP1ToHTTPServerCodec(secure: isSecure))
             try channel.pipeline.syncOperations.addHandler(HTTPKeepAliveHandler())
             try channel.pipeline.syncOperations.addTimeoutHandlers(
