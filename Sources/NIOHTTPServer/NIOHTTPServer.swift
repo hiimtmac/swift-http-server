@@ -95,7 +95,9 @@ public struct NIOHTTPServer: HTTPServer {
 
         // TODO: If we allow users to pass in an event loop, use that instead of the singleton MTELG.
         self.eventLoopGroup = .singletonMultiThreadedEventLoopGroup
-        self.listeningAddressState = .init(.idle(self.eventLoopGroup.any().makePromise()))
+        // The listening-address promise is created by the first waiter or by binding, never here: a server that
+        // only serves connections accepted by its caller, or is never served, would otherwise leak it.
+        self.listeningAddressState = .init(.idle(nil))
     }
 
     /// Starts an HTTP server with the specified request handler.
