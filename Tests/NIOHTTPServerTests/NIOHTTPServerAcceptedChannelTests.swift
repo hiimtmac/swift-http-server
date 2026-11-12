@@ -95,6 +95,21 @@ struct NIOHTTPServerAcceptedChannelTests {
         }
     }
 
+    @Test("A server released before it serves anything leaves no listening-address promise behind")
+    @available(anyAppleOS 27.0, *)
+    func unusedServerReleasesCleanly() throws {
+        // A caller that accepts its own connections may stop before any arrive. The server must not create the
+        // listening-address promise until something needs it: NIO's debug builds trap on an unfulfilled promise.
+        for httpVersion in [NIOHTTPServer.HTTPVersion.plaintextHTTP1_1, .http1_1, .http2] {
+            let (server, _) = try TestHelpers.makeServerAndClientConfiguration(
+                for: httpVersion,
+                clientLogger: self.clientLogger,
+                serverLogger: self.serverLogger
+            )
+            withExtendedLifetime(server) {}
+        }
+    }
+
     @Test(
         "Accepted connection completes its request when graceful shutdown is triggered",
         arguments: [NIOHTTPServer.HTTPVersion.plaintextHTTP1_1, .http2]

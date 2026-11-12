@@ -38,7 +38,8 @@ enum ListeningAddressError: CustomStringConvertible, Error {
 @available(anyAppleOS 27.0, *)
 extension NIOHTTPServer {
     func addressesBound(_ addresses: [NIOCore.SocketAddress?]) {
-        switch self.listeningAddressState.withLockedValue({ $0.addressesBound(addresses) }) {
+        let eventLoop = self.eventLoopGroup.any()
+        switch self.listeningAddressState.withLockedValue({ $0.addressesBound(addresses, on: eventLoop) }) {
         case .succeedPromise(let promise, let boundAddresses):
             promise.succeed(boundAddresses)
         case .failPromise(let promise, let error):
@@ -56,8 +57,9 @@ extension NIOHTTPServer {
     ///   server isn't listening anymore (for example, after ``serve(handler:)`` has returned).
     public var listeningAddresses: [SocketAddress] {
         get async throws {
-            try await self.listeningAddressState
-                .withLockedValue { try $0.listeningAddressesFuture }
+            let eventLoop = self.eventLoopGroup.any()
+            return try await self.listeningAddressState
+                .withLockedValue { try $0.listeningAddressesFuture(on: eventLoop) }
                 .get()
         }
     }
@@ -66,20 +68,23 @@ extension NIOHTTPServer {
 @available(anyAppleOS 27.0, *)
 extension NIOHTTPServer {
     enum State {
-        case idle(EventLoopPromise<[SocketAddress]>)
+        /// Not yet listening. The promise exists only once a caller waits for the addresses.
+        case idle(EventLoopPromise<[SocketAddress]>?)
         case listening(EventLoopFuture<[SocketAddress]>)
         case closedOrInvalidAddress(ListeningAddressError)
 
-        var listeningAddressesFuture: EventLoopFuture<[SocketAddress]> {
-            get throws {
-                switch self {
-                case .idle(let eventLoopPromise):
-                    return eventLoopPromise.futureResult
-                case .listening(let eventLoopFuture):
-                    return eventLoopFuture
-                case .closedOrInvalidAddress(let error):
-                    throw error
-                }
+        mutating func listeningAddressesFuture(on eventLoop: any EventLoop) throws -> EventLoopFuture<[SocketAddress]> {
+            switch self {
+            case .idle(let eventLoopPromise?):
+                return eventLoopPromise.futureResult
+            case .idle(nil):
+                let eventLoopPromise = eventLoop.makePromise(of: [SocketAddress].self)
+                self = .idle(eventLoopPromise)
+                return eventLoopPromise.futureResult
+            case .listening(let eventLoopFuture):
+                return eventLoopFuture
+            case .closedOrInvalidAddress(let error):
+                throw error
             }
         }
 
@@ -88,9 +93,11 @@ extension NIOHTTPServer {
             case failPromise(_ promise: EventLoopPromise<[SocketAddress]>, error: ListeningAddressError)
         }
 
-        mutating func addressesBound(_ addresses: [NIOCore.SocketAddress?]) -> OnBound {
+        mutating func addressesBound(_ addresses: [NIOCore.SocketAddress?], on eventLoop: any EventLoop) -> OnBound {
             switch self {
-            case .idle(let listeningAddressPromise):
+            case .idle(let waitingPromise):
+                // Later waiters read the resulting future, so create the promise if nobody has waited yet.
+                let listeningAddressPromise = waitingPromise ?? eventLoop.makePromise(of: [SocketAddress].self)
                 var socketAddresses = [SocketAddress]()
                 socketAddresses.reserveCapacity(addresses.count)
                 do throws(ListeningAddressError) {
@@ -118,12 +125,11 @@ extension NIOHTTPServer {
             switch self {
             case .idle(let listeningAddressPromise):
                 self = .closedOrInvalidAddress(.serverClosed)
+                guard let listeningAddressPromise else { return .doNothing }
                 return .failPromise(listeningAddressPromise, error: .serverClosed)
-
             case .listening:
                 self = .closedOrInvalidAddress(.serverClosed)
                 return .doNothing
-
             case .closedOrInvalidAddress:
                 return .doNothing
             }
