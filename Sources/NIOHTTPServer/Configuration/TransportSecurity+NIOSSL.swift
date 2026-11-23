@@ -41,6 +41,9 @@ extension NIOSSLContext {
             }
         }
 
+        // NIOSSL's default minimum is TLS 1.0; RFC 8996 deprecates TLS 1.0 and 1.1.
+        configuration.minimumTLSVersion = .tlsv12
+
         if case .mTLS(_, let mTLSConfiguration) = transportSecurity.backing {
             switch mTLSConfiguration.source.backing {
             case .systemDefaults:
