@@ -23,6 +23,7 @@ extension NIOHTTPServer {
         typealias Iterator = NIOAsyncChannelInboundStream<HTTPRequestPart>.AsyncIterator
 
         /// The reader's state.
+        @usableFromInline
         enum State: ~Copyable {
             /// We are reading request body part(s) and waiting for the request `.end`.
             case reading(Reading)
@@ -33,6 +34,7 @@ extension NIOHTTPServer {
             /// The underlying stream ended or threw an error before request `.end` was observed.
             case failed(any Error)
 
+            @usableFromInline
             struct Reading: ~Copyable {
                 var iterator: Iterator
 
